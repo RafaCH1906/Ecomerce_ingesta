@@ -22,14 +22,6 @@ Ingesta masiva de datos desde microservicios hacia AWS S3 con 3 contenedores Doc
 └── README.md
 ```
 
-## Características
-
-- **3 contenedores independientes**: cada uno extrae datos de su microservicio
-- **Pull 100%**: obtiene el total de registros desde APIs REST
-- **CSV Output**: genera archivos CSV para Athena
-- **S3 Upload**: carga automáticamente a `s3://bucket/ingesta/{users,products,orders}/`
-- **Timestamp**: archivos nombrados con fecha/hora para histórico
-
 ## Requisitos
 
 - Docker & Docker Compose
@@ -93,9 +85,3 @@ Ejemplo:
 SELECT COUNT(*) FROM users WHERE email LIKE '%@example.com';
 SELECT AVG(total) FROM orders GROUP BY estado;
 ```
-
-## Próximos pasos
-
-- Aumentar volumen a 20,000 registros (semilla en BD)
-- Crear vistas en Athena
-- Implementar scheduler (cron/Lambda) para ingesta automática

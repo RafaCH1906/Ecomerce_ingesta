@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  ingest_users:
+    build:
+      context: ./containers/ingest_users
+    container_name: ingest_users
+    command: python ingest_users.py
+    environment:
+      - USERS_SERVICE_URL=http://172.31.31.101:8000/api
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET=${S3_BUCKET}
+    restart: on-failure:3
+
+  ingest_products:
+    build:
+      context: ./containers/ingest_products
+    container_name: ingest_products
+    command: python ingest_products.py
+    environment:
+      - PRODUCTS_SERVICE_URL=http://172.31.31.101:8081/api
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET=${S3_BUCKET}
+    restart: on-failure:3
+
+  ingest_orders:
+    build:
+      context: ./containers/ingest_orders
+    container_name: ingest_orders
+    command: python ingest_orders.py
+    environment:
+      - ORDERS_SERVICE_URL=http://172.31.31.101:3003/api
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET=${S3_BUCKET}
+    restart: on-failure:3

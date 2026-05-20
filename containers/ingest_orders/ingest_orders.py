@@ -1,6 +1,5 @@
 import os
 import logging
-import json
 from datetime import datetime
 import requests
 import pandas as pd
@@ -13,16 +12,41 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ORDERS_SERVICE_URL = os.getenv('ORDERS_SERVICE_URL', 'http://localhost:3003/api')
+USERS_SERVICE_URL = os.getenv('USERS_SERVICE_URL', 'http://localhost:8000/api')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'rafael@superadmin.com')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 S3_BUCKET = os.getenv('S3_BUCKET', 'ecommerce-athena-results-12345')
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 
-def fetch_orders():
+
+def authenticate() -> str:
+    login_url = f"{USERS_SERVICE_URL}/auth/login"
+    logger.info(f"Authenticating against {login_url}")
+
+    response = requests.post(
+        login_url,
+        data={"username": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    token = response.json().get('access_token')
+    if not token:
+        raise RuntimeError('No access_token returned by users service login')
+
+    return token
+
+def fetch_orders(token: str):
     """Fetch all orders from Orders Service API (Node.js)."""
     logger.info(f"Starting fetch from {ORDERS_SERVICE_URL}/orders")
     
     try:
         url = f"{ORDERS_SERVICE_URL}/orders"
-        response = requests.get(url, timeout=30)
+        response = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
         response.raise_for_status()
         
         orders = response.json()
@@ -89,7 +113,8 @@ def main():
     try:
         logger.info("=== Starting Orders Ingesta ===")
         
-        orders = fetch_orders()
+        token = authenticate()
+        orders = fetch_orders(token)
         
         if not orders:
             logger.warning("No orders to ingest")

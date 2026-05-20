@@ -1,20 +1,17 @@
 # E-commerce Data Ingesta
 
-Ingesta masiva de datos desde microservicios hacia AWS S3 con 3 contenedores Docker independientes.
+Ingesta masiva de datos desde microservicios hacia AWS S3 con 2 contenedores Docker independientes.
 
 ## Estructura
 
 ```
 .
-├── docker-compose.yml          # Orquesta los 3 contenedores
+├── docker-compose.yml          # Orquesta los contenedores activos
 ├── Dockerfile                  # Imagen base compartida
 ├── .env.example                # Variables de ejemplo
 ├── containers/
 │   ├── ingest_users/           # Contenedor para usuarios
 │   │   ├── ingest_users.py
-│   │   └── requirements.txt
-│   ├── ingest_products/        # Contenedor para productos (Java API)
-│   │   ├── ingest_products.py
 │   │   └── requirements.txt
 │   ├── ingest_orders/          # Contenedor para órdenes (Node.js API)
 │   │   ├── ingest_orders.py
@@ -44,9 +41,10 @@ docker-compose up --build
 ```
 
 Esto iniciará:
-- `ingest_users`: pull desde Users Service (Python/FastAPI)
-- `ingest_products`: pull desde Products Service (Java)
-- `ingest_orders`: pull desde Orders Service (Node.js)
+- `ingest_users`: pull desde Users Service (Python/FastAPI) usando el superadmin `rafael@superadmin.com`
+- `ingest_orders`: pull desde Orders Service (Node.js) usando el mismo login admin
+
+`ingest_products` queda deshabilitado por ahora porque productos se carga manualmente desde el frontend.
 
 ## Salida esperada
 
@@ -56,8 +54,6 @@ s3://ecommerce-athena-results-12345/
 ├── ingesta/
 │   ├── users/
 │   │   └── users_20260503_142530.csv
-│   ├── products/
-│   │   └── products_20260503_142531.csv
 │   └── orders/
 │       └── orders_20260503_142532.csv
 ```
@@ -68,7 +64,6 @@ Ver logs de cada contenedor:
 
 ```bash
 docker-compose logs -f ingest_users
-docker-compose logs -f ingest_products
 docker-compose logs -f ingest_orders
 ```
 
@@ -85,3 +80,12 @@ Ejemplo:
 SELECT COUNT(*) FROM users WHERE email LIKE '%@example.com';
 SELECT AVG(total) FROM orders GROUP BY estado;
 ```
+
+## Auth for Ingesta
+
+The ingestion containers authenticate against the users service with the superadmin account:
+
+- email: `rafael@superadmin.com`
+- password: `admin123`
+
+This token is then used to read protected endpoints for `users` and `orders`.

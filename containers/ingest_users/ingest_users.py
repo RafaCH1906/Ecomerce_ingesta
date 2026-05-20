@@ -1,6 +1,5 @@
 import os
 import logging
-import json
 from datetime import datetime
 import requests
 import pandas as pd
@@ -13,10 +12,30 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 USERS_SERVICE_URL = os.getenv('USERS_SERVICE_URL', 'http://localhost:8000/api')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'rafael@superadmin.com')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 S3_BUCKET = os.getenv('S3_BUCKET', 'ecommerce-athena-results-12345')
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 
-def fetch_users():
+
+def authenticate() -> str:
+    login_url = f"{USERS_SERVICE_URL}/auth/login"
+    logger.info(f"Authenticating against {login_url}")
+
+    response = requests.post(
+        login_url,
+        data={"username": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    token = response.json().get('access_token')
+    if not token:
+        raise RuntimeError('No access_token returned by users service login')
+
+    return token
+
+def fetch_users(token: str):
     """Fetch all users from Users Service API."""
     logger.info(f"Starting fetch from {USERS_SERVICE_URL}/users")
     
@@ -27,7 +46,11 @@ def fetch_users():
     while True:
         try:
             url = f"{USERS_SERVICE_URL}/users?skip={skip}&limit={limit}"
-            response = requests.get(url, timeout=30)
+            response = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=30,
+            )
             response.raise_for_status()
             
             users = response.json()
@@ -70,7 +93,8 @@ def main():
     try:
         logger.info("=== Starting Users Ingesta ===")
         
-        users = fetch_users()
+        token = authenticate()
+        users = fetch_users(token)
         
         if not users:
             logger.warning("No users to ingest")
